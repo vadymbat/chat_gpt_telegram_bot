@@ -41,7 +41,7 @@ module "layer" {
   source_path = [
     "${path.module}/../src",
     {
-      pip_requirements = "${path.module}/../src/requirements.txt"
+      pip_requirements = "${path.module}/../src"
     }
   ]
 }
