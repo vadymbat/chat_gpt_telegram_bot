@@ -13,13 +13,15 @@ import asyncio
 import json
 from typing import Dict, Any
 
+from app.repository import BotUsersRepository
+
 logger = logging.getLogger()
 logger.setLevel(os.environ.get("LOG_LEVEL", "INFO"))
 
 openai.api_key = os.environ["OPENAI_API_KEY"]
 TG_USER_AUTH_TOKEN = os.environ["TELEGRAM_USER_TOKEN"]
-CHAT_COMPLETION_MODEL = os.environ("CHAT_COMPLETION_MODEL", "gpt-3.5-turbo")
-AUTHORIZED_USERS = []  # initialize the list of authorized users
+CHAT_COMPLETION_MODEL = os.getenv("CHAT_COMPLETION_MODEL", "gpt-3.5-turbo")
+BOT_USERS_REPOSITORY = BotUsersRepository()
 
 
 def escape_markdown(text):
@@ -75,9 +77,7 @@ def escape_markdown(text):
 
 def authorized(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sender_id = update.message.from_user.id
-    if not sender_id in AUTHORIZED_USERS:
-        return False
-    return True
+    return BOT_USERS_REPOSITORY.exists(sender_id)
 
 
 async def reset_context(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -96,9 +96,9 @@ async def authorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info("Handle auth")
     sender_id = update.message.from_user.id
     if TG_USER_AUTH_TOKEN in update.message.text:
-        logging.info("user added")
-        AUTHORIZED_USERS.append(int(sender_id))
-    if sender_id in AUTHORIZED_USERS:  # check if the sender is authorized
+        BOT_USERS_REPOSITORY.add(sender_id)
+        logging.info(f"User added {sender_id}")
+    if BOT_USERS_REPOSITORY.exists(sender_id):  # check if the sender is authorized
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=f"User {sender_id} has been authorized to use this bot.",
@@ -108,6 +108,17 @@ async def authorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=update.effective_chat.id,
             text="Sorry, you are not authorized to use this command.",
         )
+
+
+async def deauthorize(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    logging.info("Handle deauth")
+    sender_id = update.message.from_user.id
+    BOT_USERS_REPOSITORY.remove(sender_id)
+    logging.info(f"User '{sender_id}' is removed.")
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"User '{sender_id}' has been removed.",
+    )
 
 
 # Define a function to handle incoming messages
@@ -166,10 +177,11 @@ application = (
 )
 start_handler = CommandHandler("start", start)
 auth_handler = CommandHandler("authorize", authorize)
+deauth_handler = CommandHandler("deauthorize", deauthorize)
 reset_handler = CommandHandler("reset", reset_context)
 message_handler = MessageHandler(filters.TEXT, process_message)
-
 application.add_handler(auth_handler)
+application.add_handler(deauth_handler)
 application.add_handler(reset_handler)
 application.add_handler(start_handler)
 application.add_handler(message_handler)

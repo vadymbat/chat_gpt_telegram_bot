@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Deploy your own Telegram chatbot that utilizes ChatGPT for conversational AI. The chatbot is built using Python and based on an AWS Lambda architecture, using Terraform to manage infrastructure.
+Deploy your own Telegram chatbot that utilizes ChatGPT for conversational AI. The chatbot is built using Python and based on AWS Serverless architecture backed by AWS Lambda to process commands and Dynamo DB table to store registred users. All infrastructure is managed by Terraform.
 
 ## Requirements
 
@@ -21,8 +21,13 @@ To run this chatbot, you will need:
    git clone https://github.com/vadymbat/chat_gpt_telegram_bot
    ```
 
-2. Create a Telegram bot via [BotFather](https://core.telegram.org/bots#creating-a-new-bot). Register bot commands: `authorize` to login and `reset` to remove bot message history. Save bot token for future steps.
+2. Create a Telegram bot via [BotFather](https://core.telegram.org/bots#creating-a-new-bot). Register bot commands: `authorize` to login, `deauthorize` to logout and `reset` to remove bot message history. Save bot token for future steps.
+```
+authorize - login to use the bot
+deauthorize - logout
+reset - remove bot message history
 
+```
 3. Navigate to the terraform directory:
 
    ```
@@ -53,9 +58,8 @@ curl -X POST https://api.telegram.org/bot<telegram_bot_token>/setWebhook?url=<yo
 3. Start some conversation
 4. Use `/reset` to remove message history when switching topic
 5. You can share your bot with friends, by sharing a link and `<telegram_user_auth_token>`
-
+6. Use `/deauthorize` to logout
 ## Limitation
-- This solution doesn't have a database to save the state, so the conversation are limited by AWS Lambda container life approximately 5-15 minutes.
 - You need to send messages to keep container alive otherwise, the message history will be lost in about 3 minutes.
 
 ## Conclusion

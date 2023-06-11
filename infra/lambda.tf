@@ -7,7 +7,7 @@ module "lambda_chat_gpt" {
 
   function_name = "${var.name_prefix}-tg-message-handler"
   description   = "The lambda to handle tg messages"
-  handler       = "lambda.lambda_handler"
+  handler       = "app.lambda.lambda_handler"
   runtime       = "python3.9"
   publish       = true
   # reserved_concurrent_executions    = 0
@@ -23,9 +23,28 @@ module "lambda_chat_gpt" {
     "TELEGRAM_TOKEN"        = var.telegram_bot_token
     "TELEGRAM_USER_TOKEN"   = var.telegram_user_auth_token
     "CHAT_COMPLETION_MODEL" = var.chat_completion_model
+    "USERS_DB_TABLE_NAME"   = aws_dynamodb_table.chat_gpt_tg_bot_users.name
+  }
+  attach_policy_statements = true
+  policy_statements = {
+    dynamodb = {
+      effect = "Allow",
+      actions = [
+        "dynamodb:BatchGetItem",
+        "dynamodb:GetItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem"
+      ],
+      resources = [aws_dynamodb_table.chat_gpt_tg_bot_users.arn]
+    }
   }
 
-  source_path = "${path.module}/../src/lambda.py"
+  source_path = "${path.module}/../src"
+  artifacts_dir = "${path.root}/builds/lambda_function_layer/"
 }
 
 
